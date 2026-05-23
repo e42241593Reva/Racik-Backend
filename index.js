@@ -17,10 +17,10 @@ const core = new midtransClient.CoreApi({
   clientKey: process.env.MIDTRANS_CLIENT_KEY,
 });
 
-// Route Snap (yang lama)
+// Snap dengan filter metode pembayaran
 app.post('/create-transaction', async (req, res) => {
   try {
-    const { orderId, amount, name, email } = req.body;
+    const { orderId, amount, name, email, enabledPayments } = req.body;
     const parameter = {
       transaction_details: {
         order_id: orderId,
@@ -31,6 +31,12 @@ app.post('/create-transaction', async (req, res) => {
         email: email,
       },
     };
+
+    // Kalau ada filter metode, tambahkan
+    if (enabledPayments && enabledPayments.length > 0) {
+      parameter.enabled_payments = enabledPayments;
+    }
+
     const token = await snap.createTransaction(parameter);
     res.json({ token: token.token });
   } catch (e) {
@@ -38,7 +44,7 @@ app.post('/create-transaction', async (req, res) => {
   }
 });
 
-// Route Virtual Account (baru)
+// Virtual Account
 app.post('/create-va', async (req, res) => {
   try {
     const { orderId, amount, bank, name, email } = req.body;
