@@ -17,7 +17,7 @@ const core = new midtransClient.CoreApi({
   clientKey: process.env.MIDTRANS_CLIENT_KEY,
 });
 
-// Snap dengan filter metode pembayaran
+// Snap dengan filter
 app.post('/create-transaction', async (req, res) => {
   try {
     const { orderId, amount, name, email, enabledPayments } = req.body;
@@ -31,12 +31,9 @@ app.post('/create-transaction', async (req, res) => {
         email: email,
       },
     };
-
-    // Kalau ada filter metode, tambahkan
     if (enabledPayments && enabledPayments.length > 0) {
       parameter.enabled_payments = enabledPayments;
     }
-
     const token = await snap.createTransaction(parameter);
     res.json({ token: token.token });
   } catch (e) {
@@ -66,6 +63,39 @@ app.post('/create-va', async (req, res) => {
     res.json({
       vaNumber: response.va_numbers?.[0]?.va_number || response.permata_va_number,
       bank: response.va_numbers?.[0]?.bank || 'permata',
+      orderId: response.order_id,
+      grossAmount: response.gross_amount,
+      transactionStatus: response.transaction_status,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GoPay
+app.post('/create-gopay', async (req, res) => {
+  try {
+    const { orderId, amount, name, email } = req.body;
+    const parameter = {
+      payment_type: 'gopay',
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: amount,
+      },
+      customer_details: {
+        first_name: name,
+        email: email,
+      },
+      gopay: {
+        enable_callback: false,
+      },
+    };
+    const response = await core.charge(parameter);
+    const qrUrl = response.actions?.find(a => a.name === 'generate-qr-code')?.url || '';
+    const deeplink = response.actions?.find(a => a.name === 'deeplink-redirect')?.url || '';
+    res.json({
+      qrUrl,
+      deeplink,
       orderId: response.order_id,
       grossAmount: response.gross_amount,
       transactionStatus: response.transaction_status,
