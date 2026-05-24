@@ -17,19 +17,12 @@ const core = new midtransClient.CoreApi({
   clientKey: process.env.MIDTRANS_CLIENT_KEY,
 });
 
-// Snap dengan filter
 app.post('/create-transaction', async (req, res) => {
   try {
     const { orderId, amount, name, email, enabledPayments } = req.body;
     const parameter = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: amount,
-      },
-      customer_details: {
-        first_name: name,
-        email: email,
-      },
+      transaction_details: { order_id: orderId, gross_amount: amount },
+      customer_details: { first_name: name, email: email },
     };
     if (enabledPayments && enabledPayments.length > 0) {
       parameter.enabled_payments = enabledPayments;
@@ -41,23 +34,14 @@ app.post('/create-transaction', async (req, res) => {
   }
 });
 
-// Virtual Account
 app.post('/create-va', async (req, res) => {
   try {
     const { orderId, amount, bank, name, email } = req.body;
     const parameter = {
       payment_type: 'bank_transfer',
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: amount,
-      },
-      customer_details: {
-        first_name: name,
-        email: email,
-      },
-      bank_transfer: {
-        bank: bank.toLowerCase(),
-      },
+      transaction_details: { order_id: orderId, gross_amount: amount },
+      customer_details: { first_name: name, email: email },
+      bank_transfer: { bank: bank.toLowerCase() },
     };
     const response = await core.charge(parameter);
     res.json({
@@ -72,23 +56,14 @@ app.post('/create-va', async (req, res) => {
   }
 });
 
-// GoPay
 app.post('/create-gopay', async (req, res) => {
   try {
     const { orderId, amount, name, email } = req.body;
     const parameter = {
       payment_type: 'gopay',
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: amount,
-      },
-      customer_details: {
-        first_name: name,
-        email: email,
-      },
-      gopay: {
-        enable_callback: false,
-      },
+      transaction_details: { order_id: orderId, gross_amount: amount },
+      customer_details: { first_name: name, email: email },
+      gopay: { enable_callback: false },
     };
     const response = await core.charge(parameter);
     const qrUrl = response.actions?.find(a => a.name === 'generate-qr-code')?.url || '';
@@ -105,27 +80,14 @@ app.post('/create-gopay', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Server jalan di port ' + PORT));
-
-// OVO
 app.post('/create-ovo', async (req, res) => {
   try {
     const { orderId, amount, phone, name, email } = req.body;
     const parameter = {
       payment_type: 'ovo',
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: amount,
-      },
-      customer_details: {
-        first_name: name,
-        email: email,
-        phone: phone,
-      },
-      ovo: {
-        callback_url: 'https://racik-backend-production.up.railway.app',
-      },
+      transaction_details: { order_id: orderId, gross_amount: amount },
+      customer_details: { first_name: name, email: email, phone: phone },
+      ovo: { callback_url: 'https://racik-backend-production.up.railway.app' },
     };
     const response = await core.charge(parameter);
     res.json({
@@ -139,23 +101,38 @@ app.post('/create-ovo', async (req, res) => {
   }
 });
 
-// ShopeePay
+app.post('/create-dana', async (req, res) => {
+  try {
+    const { orderId, amount, name, email, phone } = req.body;
+    const parameter = {
+      payment_type: 'dana',
+      transaction_details: { order_id: orderId, gross_amount: amount },
+      customer_details: { first_name: name, email: email, phone: phone },
+      dana: { callback_url: 'https://racik-backend-production.up.railway.app' },
+    };
+    const response = await core.charge(parameter);
+    const deeplink = response.actions?.find(a => a.name === 'deeplink-redirect')?.url
+      || response.actions?.find(a => a.name === 'mobile-deeplink')?.url
+      || '';
+    res.json({
+      deeplink,
+      orderId: response.order_id,
+      grossAmount: response.gross_amount,
+      transactionStatus: response.transaction_status,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/create-shopeepay', async (req, res) => {
   try {
     const { orderId, amount, name, email } = req.body;
     const parameter = {
       payment_type: 'shopeepay',
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: amount,
-      },
-      customer_details: {
-        first_name: name,
-        email: email,
-      },
-      shopeepay: {
-        callback_url: 'https://racik-backend-production.up.railway.app',
-      },
+      transaction_details: { order_id: orderId, gross_amount: amount },
+      customer_details: { first_name: name, email: email },
+      shopeepay: { callback_url: 'https://racik-backend-production.up.railway.app' },
     };
     const response = await core.charge(parameter);
     const deeplink = response.actions?.find(a => a.name === 'deeplink-redirect')?.url || '';
@@ -170,3 +147,5 @@ app.post('/create-shopeepay', async (req, res) => {
   }
 });
 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Server jalan di port ' + PORT));
